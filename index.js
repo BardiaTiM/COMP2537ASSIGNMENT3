@@ -4,17 +4,39 @@ let pokemons = []
 
 
 const updatePaginationDiv = (currentPage, numPages) => {
-  $('#pagination').empty()
+  $('#pagination').empty();
 
-  const startPage = 1;
-  const endPage = numPages;
-  for (let i = startPage; i <= endPage; i++) {
+  const maxPages = 5; // maximum number of page buttons to show
+  const startPage = Math.max(currentPage - 2, 1);
+  const endPage = Math.min(startPage + maxPages - 1, numPages);
+
+  if (currentPage > 1) {
     $('#pagination').append(`
-    <button class="btn btn-primary page ml-1 numberedButtons" value="${i}">${i}</button>
-    `)
+      <button class="btn btn-primary page numberedButtons" value="${currentPage - 1}">
+        Previous
+      </button>
+    `);
   }
 
-}
+  for (let i = startPage; i <= endPage; i++) {
+    $('#pagination').append(`
+      <button class="btn btn-primary page numberedButtons ${i === currentPage ? 'active' : ''}" value="${i}">
+        ${i}
+      </button>
+    `);
+  }
+
+  if (currentPage < numPages) {
+    $('#pagination').append(`
+      <button class="btn btn-primary page numberedButtons" value="${currentPage + 1}">
+        Next
+      </button>
+    `);
+  }
+};
+
+
+
 
 const paginate = async (currentPage, PAGE_SIZE, pokemons) => {
   selected_pokemons = pokemons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -29,10 +51,16 @@ const paginate = async (currentPage, PAGE_SIZE, pokemons) => {
         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#pokeModal">
           More
         </button>
-        </div>  
-        `)
+      </div>  
+    `)
   })
-}
+
+  const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(startIndex + PAGE_SIZE - 1, pokemons.length);
+  const totalCount = pokemons.length;
+  $('#pokemonCount').text(`Displaying ${startIndex} - ${endIndex} of ${totalCount} Pokémons`);
+};
+
 
 const setup = async () => {
   // test out poke api using axios here
