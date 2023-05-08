@@ -39,7 +39,24 @@ const updatePaginationDiv = (currentPage, numPages) => {
 
 
 const paginate = async (currentPage, PAGE_SIZE, pokemons) => {
-  selected_pokemons = pokemons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const typeFilters = Array.from($('.typeFilter:checked')).map((checkbox) => checkbox.value);
+  
+  // filter pokemons by selected types
+  let filtered_pokemons = pokemons;
+  if (typeFilters.length > 0) {
+    filtered_pokemons = await Promise.all(pokemons.map(async (pokemon) => {
+      const res = await axios.get(pokemon.url);
+      const types = res.data.types.map((type) => type.type.name);
+      if (typeFilters.every((filter) => types.includes(filter))) {
+        return pokemon;
+      }
+      return null;
+    }));
+    filtered_pokemons = filtered_pokemons.filter((pokemon) => pokemon !== null);
+  }
+  
+  // paginate selected pokemons
+  const selected_pokemons = filtered_pokemons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   $('#pokeCards').empty()
   selected_pokemons.forEach(async (pokemon) => {
@@ -56,15 +73,15 @@ const paginate = async (currentPage, PAGE_SIZE, pokemons) => {
   })
 
   const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
-  const endIndex = Math.min(startIndex + PAGE_SIZE - 1, pokemons.length);
-  const totalCount = pokemons.length;
+  const endIndex = Math.min(startIndex + PAGE_SIZE - 1, filtered_pokemons.length);
+  const totalCount = filtered_pokemons.length;
   $('#pokemonCount').text(`Displaying ${startIndex} - ${endIndex} of ${totalCount} Pokémons`);
 };
 
 
+
 const setup = async () => {
   // test out poke api using axios here
-
 
   $('#pokeCards').empty()
   let response = await axios.get('https://pokeapi.co/api/v2/pokemon?offset=0&limit=810');
@@ -125,7 +142,31 @@ const setup = async () => {
     //update pagination buttons
     updatePaginationDiv(currentPage, numPages)
   })
-
+  
+    // get pokemon types from API
+    const responseF = await axios.get('https://pokeapi.co/api/v2/type');
+    const types = responseF.data.results;
+  
+    // create checkboxes for each type
+    types.forEach((type) => {
+      $('#typeFilters').append(`
+        <div class="form-check">
+          <input class="form-check-input typeFilter" type="checkbox" value="${type.name}" id="${type.name}">
+          <label class="form-check-label" for="${type.name}">
+            ${type.name}
+          </label>
+        </div>
+      `);
+    });
+  
+    $('body').on('change', '.typeFilter', async function (e) {
+      currentPage = 1;
+      paginate(currentPage, PAGE_SIZE, pokemons);
+  
+      // update pagination buttons
+      const numPages = Math.ceil(pokemons.length / PAGE_SIZE);
+      updatePaginationDiv(currentPage, numPages);
+    });
 }
 
 
